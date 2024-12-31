@@ -1,0 +1,44 @@
+- name: Deploy the application
+  hosts: webserver
+  become: yes
+  tasks:
+    - name: Install Git
+      apt:
+        name: git
+        state: present
+
+    - name: Clone the application repository
+      git:
+        repo: 'https://github.com/EmericDe/Appli-Locations-Voitures.git'
+        dest: /var/www/html/Appli-Locations-Voitures
+        version: main
+
+    - name: Set correct permissions for application files
+      file:
+        path: /var/www/html/Appli-Locations-Voitures
+        owner: www-data
+        group: www-data
+        recurse: yes
+
+    - name: Enable Apache rewrite module
+      command: a2enmod rewrite
+      notify: Restart Apache
+
+    - name: Copy Apache VirtualHost configuration
+      template:
+        src: templates/virtualhost.conf.j2
+        dest: /etc/apache2/sites-available/Appli-Locations-Voitures.conf
+
+    - name: Enable VirtualHost
+      command: a2ensite Appli-Locations-Voitures.conf
+      notify: Restart Apache
+
+    - name: Restart Apache to apply changes
+      service:
+        name: apache2
+        state: restarted
+  handlers:
+    - name: Restart Apache
+      service:
+        name: apache2
+        state: restarted

@@ -1,0 +1,22 @@
+- name: Install PHP and required extensions
+  apt:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - php
+    - php-mysql
+    - php-cli
+    - php-curl
+    - php-zip
+    - php-mbstring
+    - libapache2-mod-php
+
+- name: Ensure PHP configuration is optimized
+  lineinfile:
+    path: /etc/php/7.4/apache2/php.ini
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+  with_items:
+    - { regexp: '^memory_limit =.*', line: 'memory_limit = 256M' }
+    - { regexp: '^upload_max_filesize =.*', line: 'upload_max_filesize = 50M' }
+    - { regexp: '^post_max_size =.*', line: 'post_max_size = 50M' }

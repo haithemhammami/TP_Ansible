@@ -1,0 +1,23 @@
+- name: Install MySQL server
+  apt:
+    name: mysql-server
+    state: present
+    update_cache: yes
+
+- name: Ensure MySQL is running
+  service:
+    name: mysql
+    state: started
+    enabled: yes
+
+- name: Create database
+  mysql_db:
+    name: locations_voitures
+    state: present
+
+- name: Create database user
+  mysql_user:
+    name: voiture_user
+    password: voiture_password
+    priv: "locations_voitures.*:ALL"
+    state: present

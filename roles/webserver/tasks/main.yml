@@ -1,0 +1,75 @@
+---
+- name: Installation et configuration du serveur web avec PHP
+  hosts: webservers
+  become: true
+  vars:
+    php_packages:
+      - php
+      - php-mysql
+      - php-xml
+      - php-mbstring
+      - php-curl
+      - php-gd
+    apache_service: "{{ 'httpd' if ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat' else 'apache2' }}"
+    php_version: "{{ '7.4' if ansible_distribution == 'Ubuntu' else '7' }}"
+    
+  tasks:
+    - name: Mise à jour du cache des paquets
+      package:
+        update_cache: yes
+      when: ansible_distribution in ['Debian', 'Ubuntu']
+
+    - name: Installation d'Apache
+      package:
+        name: "{{ apache_service }}"
+        state: present
+
+    - name: Installation des paquets PHP
+      package:
+        name: "{{ php_packages }}"
+        state: present
+
+    - name: S'assurer qu'Apache est démarré et activé
+      service:
+        name: "{{ apache_service }}"
+        state: started
+        enabled: yes
+
+    - name: Création du répertoire du projet
+      file:
+        path: /var/www/html/monapp
+        state: directory
+        owner: "{{ apache_service }}"
+        group: "{{ apache_service }}"
+        mode: '0755'
+
+    - name: Configuration PHP - php.ini
+      template:
+        src: templates/php.ini.j2
+        dest: /etc/php/{{ php_version }}/apache2/php.ini
+        mode: '0644'
+      notify: Restart Apache
+      when: ansible_distribution in ['Debian', 'Ubuntu']
+
+    - name: Création du fichier info.php pour tester
+      copy:
+        content: |
+          <?php
+          phpinfo();
+          ?>
+        dest: /var/www/html/monapp/info.php
+        mode: '0644'
+
+    - name: Configuration du virtual host Apache
+      template:
+        src: templates/vhost.conf.j2
+        dest: "/etc/{{ apache_service }}/sites-available/monapp.conf"
+        mode: '0644'
+      notify: Restart Apache
+      when: ansible_distribution in ['Debian', 'Ubuntu']
+
+  handlers:
+    - name: Restart Apache
+      service:
+        name: "{{ apache_service }}"
+        state: restarted
